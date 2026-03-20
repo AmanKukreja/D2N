@@ -1,0 +1,117 @@
+#pragma kernel CSMain
+
+struct TriangleGPU {
+    float3 v0;
+    float3 v1;
+    float3 v2;
+};
+
+// Input Buffers
+StructuredBuffer<int> _VoxelData; // Flattened 3D array of voxel states (0 or 1)
+StructuredBuffer<int> _EdgesTable;
+StructuredBuffer<int> _TriangulationTable; // Flattened: index = cubeIndex * stride + triEdgeIndex
+StructuredBuffer<int> _CornerIndexAFromEdge;
+StructuredBuffer<int> _CornerIndexBFromEdge;
+StructuredBuffer<int3> _CornerOffsets; // Each element is an int3 (x,y,z offset)
+
+// Output Buffer
+AppendStructuredBuffer<TriangleGPU> _OutputTriangles;
+
+// Uniforms
+int3 _ChunkGridIndex;   // Min corner of the chunk in global voxel grid space
+int _ChunkSize;         // Number of cells in one dimension for this chunk (e.g., 16 for a 16x16x16 chunk)
+float _Resolution;
+int _ProcessingDim;     // Dimension of the _VoxelData array (_ChunkSize + 1)
+int _TriTableStride;    // Stride for accessing _TriangulationTable (should be 16)
+
+// Helper to sample voxel data (which is a flattened 3D array)
+// localPos is relative to the _VoxelData grid (0 to _ProcessingDim-1)
+int SampleVoxelData(int3 localPos) {
+    if (localPos.x < 0 || localPos.x >= _ProcessingDim ||
+        localPos.y < 0 || localPos.y >= _ProcessingDim ||
+        localPos.z < 0 || localPos.z >= _ProcessingDim) {
+        return 0; // Outside bounds, treat as empty
+    }
+    int flatIndex = localPos.x + localPos.y * _ProcessingDim + localPos.z * _ProcessingDim * _ProcessingDim;
+    return _VoxelData[flatIndex];
+}
+
+// Converts a global voxel grid position to the chunk's local 3D mesh space (centered on chunk pivot)
+float3 ConvertGlobalGridToChunkLocalMeshPosition(int3 globalVoxelGridPos)
+{
+    // Voxel grid position relative to this chunk's grid origin (min corner)
+    int3 voxelGridPosInChunkRelative = globalVoxelGridPos - _ChunkGridIndex;
+
+    // Calculate 3D position in chunk's local space, relative to chunk's center
+    float3 halfChunkVoxels = float3(_ChunkSize / 2.0f, _ChunkSize / 2.0f, _ChunkSize / 2.0f);
+    float3 localPos = (float3(voxelGridPosInChunkRelative) - halfChunkVoxels) * _Resolution;
+    return localPos;
+}
+
+// Number of threads per group.
+// Should match dispatch calculation in C#.
+// For a chunkSize of 16, (4,4,4) means 16*16*16 / (4*4*4) = 64 groups total, (4,4,4) groups.
+// For a chunkSize of 16, (8,8,1) means (2,2,16) groups. Choose based on typical chunk sizes.
+[numthreads(8,8,1)] // Process 8x8 cells in XY plane, 1 layer in Z per thread group Z-slice.
+void CSMain (uint3 dispatchThreadID : SV_DispatchThreadID, uint3 groupThreadID : SV_GroupThreadID, uint3 groupID : SV_GroupID)
+{
+    // dispatchThreadID is the unique ID for this thread across the entire dispatch.
+    // It directly corresponds to the cell index (x,y,z) within the chunk (0 to _ChunkSize-1)
+    int3 cellLocalID = int3(dispatchThreadID.x, dispatchThreadID.y, dispatchThreadID.z);
+
+    // If this thread is outside the actual chunk cell dimensions, exit.
+    // (Useful if dispatching a grid slightly larger than _ChunkSize for alignment)
+    if (cellLocalID.x >= _ChunkSize || cellLocalID.y >= _ChunkSize || cellLocalID.z >= _ChunkSize) {
+        return;
+    }
+
+    // --- 1. Calculate Cube Index ---
+    // Cell's minimum corner in the _VoxelData grid coordinates
+    // (which starts at chunkIndex, so cellLocalID is the offset into it)
+    int cubeIndex = 0;
+    float3 cornerLocalMeshPositions[8]; // To store interpolated vertex positions
+
+    for (int i = 0; i < 8; i++) {
+        int3 cornerDataGridPos = cellLocalID + _CornerOffsets[i]; // Position within _VoxelData buffer
+        if (SampleVoxelData(cornerDataGridPos) > 0) {
+            cubeIndex |= (1 << i);
+        }
+        // Calculate the local mesh position for this corner (used for interpolation)
+        // Global grid position of the corner:
+        int3 cornerGlobalGridPos = _ChunkGridIndex + cornerDataGridPos;
+        cornerLocalMeshPositions[i] = ConvertGlobalGridToChunkLocalMeshPosition(cornerGlobalGridPos);
+    }
+
+    // If cell is entirely inside or outside, no surface
+    if (cubeIndex == 0 || cubeIndex == 255) {
+        return;
+    }
+
+    // --- 2. Find Intersected Edges and Calculate Vertices ---
+    int edgeMask = _EdgesTable[cubeIndex];
+    float3 edgeVertices[12]; // Interpolated vertex for each of the 12 potential edges
+
+    for (int j = 0; j < 12; j++) {
+        if ((edgeMask & (1 << j)) != 0) { // If edge 'j' is intersected
+            int c1_idx = _CornerIndexAFromEdge[j];
+            int c2_idx = _CornerIndexBFromEdge[j];
+
+            // Interpolate: Midpoint for simplicity.
+            // Using the pre-calculated local mesh positions of the corners.
+            edgeVertices[j] = (cornerLocalMeshPositions[c1_idx] + cornerLocalMeshPositions[c2_idx]) * 0.5f;
+        }
+    }
+
+    // --- 3. Generate Triangles ---
+    // Triangulation table entry for this cubeIndex starts at cubeIndex * _TriTableStride
+    int triTableBaseIndex = cubeIndex * _TriTableStride;
+    for (int k = 0; _TriangulationTable[triTableBaseIndex + k] != -1 && k < _TriTableStride; k += 3) {
+        TriangleGPU tri;
+        // Paul Bourke's tables often need winding order v0, v2, v1 for Unity's standard shaders
+        tri.v0 = edgeVertices[_TriangulationTable[triTableBaseIndex + k]];
+        tri.v1 = edgeVertices[_TriangulationTable[triTableBaseIndex + k + 2]]; // Swapped
+        tri.v2 = edgeVertices[_TriangulationTable[triTableBaseIndex + k + 1]]; // Swapped
+        
+        _OutputTriangles.Append(tri);
+    }
+}

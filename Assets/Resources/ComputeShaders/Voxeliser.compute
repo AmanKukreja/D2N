@@ -1,0 +1,172 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+// ----- Data Input/Output (Buffers) -----
+// Data the CPU sends TO the GPU
+struct TriangleData {
+    float3 v0;
+    float3 v1;
+    float3 v2;
+    // Potentially normals, etc., if needed later
+};
+
+StructuredBuffer<TriangleData> triangles; // Read-only buffer of triangle data
+uniform int numTriangles; // A single value passed from CPU
+uniform float resolution;
+uniform float3 meshMin; // Bounding box min in local space
+uniform float3 gridDimensions; // voxelsX, voxelsY, voxelsZ
+uniform float4x4 localToWorldMatrix; // To transform points/rays if needed
+
+uniform float4x4 worldToLocalMatrix;
+uniform float3 worldUpDirection; // The object's current 'up' in the world
+
+// Data the GPU writes back TO the CPU (or other GPU stages)
+// RW prefix means Read/Write
+// RWStructuredBuffer<int> voxelResults; // Output buffer (e.g., 1 for inside, 0 for outside)
+RWStructuredBuffer<float3> voxelPositions; // Store position if inside
+
+static const float MT_EPSILON = 0.000001f;
+
+bool MollerIntersection(
+    float3 v0,             // Triangle vertex 0
+    float3 v1,             // Triangle vertex 1
+    float3 v2,             // Triangle vertex 2
+    float3 rayOrigin,      // Ray origin point
+    float3 rayDirection)   // Ray direction vector (should be normalized for some applications, but not strictly required for this algorithm)
+{
+    // Calculate triangle edge vectors
+    float3 edge1 = v1 - v0;
+    float3 edge2 = v2 - v0;
+
+    // Calculate determinant: p = cross(rayDirection, edge2)
+    float3 pvec = cross(rayDirection, edge2);
+
+    // Calculate determinant
+    float det = dot(edge1, pvec);
+
+    // Use a slightly larger epsilon for the check to be safe
+    const float CULLING_EPSILON = 0.00001f;
+    if (det > -CULLING_EPSILON && det < CULLING_EPSILON) {
+        return false;
+    }
+
+    // THIS IS THE NEW HARDENING STEP
+    // Clamp the denominator to prevent division by a tiny number
+    // that passed the epsilon check but would still result in a huge invDet.
+    if (det > 0.0f) {
+        det = max(det, CULLING_EPSILON);
+    } else {
+        det = min(det, -CULLING_EPSILON);
+    }
+
+    float invDet = 1.0f / det;
+
+    // Calculate distance from v0 to ray origin: tvec = rayOrigin - v0
+    float3 tvec = rayOrigin - v0;
+
+    // Calculate u parameter (barycentric coordinate) and test bounds
+    // u = dot(tvec, pvec) * invDet
+    float u = dot(tvec, pvec) * invDet;
+    if (u < 0.0f || u > 1.0f) {
+        return false; // Intersection point is outside the triangle edge (v0,v1)
+    }
+
+    // Prepare to test v parameter: qvec = cross(tvec, edge1)
+    float3 qvec = cross(tvec, edge1);
+
+    // Calculate v parameter (barycentric coordinate) and test bounds
+    // v = dot(rayDirection, qvec) * invDet
+    float v = dot(rayDirection, qvec) * invDet;
+    if (v < 0.0f || u + v > 1.0f) {
+        return false; // Intersection point is outside the triangle edge (v0,v2) or beyond edge (v1,v2)
+    }
+
+    // Calculate t parameter: t = dot(edge2, qvec) * invDet
+    // This represents the distance along the ray to the intersection point.
+    float t = dot(edge2, qvec) * invDet;
+
+    // Check if the intersection point is *in front* of the ray origin.
+    // We need t > epsilon to ensure the intersection is not coincident with the origin
+    // and is in the positive direction of the ray.
+    if (t > MT_EPSILON) {
+        return true; // Ray intersects the triangle
+    } else {
+        return false; // Intersection is behind the ray origin
+    }
+}
+
+[numthreads(8,8,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // ----- Algorithm Flow (Inside the Kernel - Executed by EACH thread) -----
+
+    // 1. Check if this thread ID is even valid (sometimes you dispatch more threads than needed)
+    if (id.x >= (uint)gridDimensions.x || id.y >= (uint)gridDimensions.y || id.z >= (uint)gridDimensions.z) 
+    {
+        return; // This thread is outside the bounds of our voxel grid, do nothing.
+    }
+
+    // 2. Calculate which voxel this thread is responsible for
+    uint voxelIndex = id.x + id.y * uint(gridDimensions.x) + id.z * uint(gridDimensions.x * gridDimensions.y);
+    // This gives a single flat index for the output buffer.
+
+    // --- >>> CORRECTED Voxel Center Calculation <<< ---
+    // Derive scale from the localToWorld matrix columns' lengths
+    // (Assumes no shear in the matrix)
+    float3 objectScale;
+    objectScale.x = length(localToWorldMatrix._m00_m10_m20); // length of column 0
+    objectScale.y = length(localToWorldMatrix._m01_m11_m21); // length of column 1
+    objectScale.z = length(localToWorldMatrix._m02_m12_m22); // length of column 2
+
+    // Prevent division by zero if scale is zero (unlikely but safe)
+    objectScale = max(objectScale, float3(0.00001f, 0.00001f, 0.00001f));
+
+    // Calculate the step size required in LOCAL space to achieve the desired world 'resolution'
+    float3 localStepSize = resolution / objectScale;
+
+    // Calculate voxel center using the adjusted local step size
+    float3 voxelCenterLocal = meshMin + float3(
+        (id.x + 0.5f) * localStepSize.x,
+        (id.y + 0.5f) * localStepSize.y,
+        (id.z + 0.5f) * localStepSize.z);
+
+    // 3. Calculate Ray
+    float3 rayDirectionWorld = worldUpDirection;
+
+    float3 rayDirectionLocal = mul((float3x3)worldToLocalMatrix, rayDirectionWorld);
+    rayDirectionLocal = normalize(rayDirectionLocal); // Ensure it's normalized after transform
+
+    float3 rayOriginLocal = voxelCenterLocal;
+
+    // Precompute inverse local direction
+    float3 invRayDirectionLocal = float3(
+        rayDirectionLocal.x == 0.0f ? 1.#INF : 1.0f / rayDirectionLocal.x,
+        rayDirectionLocal.y == 0.0f ? 1.#INF : 1.0f / rayDirectionLocal.y,
+        rayDirectionLocal.z == 0.0f ? 1.#INF : 1.0f / rayDirectionLocal.z
+    );
+
+    // 4. Perform the Point-in-Mesh test
+    int intersectionCount = 0;
+    for (int triIndex = 0; triIndex < numTriangles; ++triIndex) 
+    {
+        TriangleData tri = triangles[triIndex];
+
+        if (MollerIntersection(tri.v0, tri.v1, tri.v2, rayOriginLocal, rayDirectionLocal)) 
+        {
+            intersectionCount++;
+        }
+    }
+
+    // 5. Determine if inside or outside
+    bool isInside = (intersectionCount & 1) == 1;
+
+    // 6. Store position if inside:
+    if (isInside) 
+    {
+        voxelPositions[voxelIndex] = voxelCenterLocal;
+    }
+    else
+    {
+        voxelPositions[voxelIndex] = float3(-1,-1,-1);
+    }
+}
