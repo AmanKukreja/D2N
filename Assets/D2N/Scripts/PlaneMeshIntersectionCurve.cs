@@ -17,23 +17,28 @@ public class PlaneMeshIntersectionCurve : MonoBehaviour
     private List<Vector3> cachedCurve = new List<Vector3>();
     private bool curveDirty = true;
 
-    // void Update()
-    // {
-    //     // Optional: Force rebuild if transform moves
-    //     if (transform.hasChanged)
-    //     {
-    //         curveDirty = true;
-    //         transform.hasChanged = false;
-    //     }
-    // }
-
     void RebuildCurve()
     {
         if (targetMesh == null || targetMesh.sharedMesh == null) return;
+        //Debug.LogError("Entered intersection curve");
 
         slicingPlane = new Plane(transform.up, transform.position);
 
         List<Segment> segments = ComputeIntersectionSegments();
+        //Debug.LogError("Segment count is : " + segments.Count);
+        if (segments.Count <50)
+        {
+            //Debug.LogError("Entered less count");
+            for (int i = 0;i<10;i++)
+            {
+                slicingPlane = new Plane(transform.up, transform.position+transform.up * (0.001f * i));
+                segments = ComputeIntersectionSegments();
+                if (segments.Count<50)
+                {
+                    break;
+                }
+            }  
+        }
         cachedCurve = BuildContinuousCurve(segments);
 
         curveDirty = true;
@@ -146,7 +151,15 @@ public class PlaneMeshIntersectionCurve : MonoBehaviour
                 }
             }
 
-            if (!found) break; // Gap in mesh or end of open curve
+            if (!found)
+            {
+                // Start a new chain from remaining segments
+                Segment next = segments[0];
+                segments.RemoveAt(0);
+
+                curve.Add(next.a);
+                curve.Add(next.b);
+            }
         }
 
         // --- ENFORCE WINDING DIRECTION ---

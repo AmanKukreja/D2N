@@ -887,7 +887,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1522181633}
         m_TargetAssemblyTypeName: PolygonObstacle, Assembly-CSharp
         m_MethodName: UpdateOnClick
         m_Mode: 1
@@ -1979,7 +1979,7 @@ MonoBehaviour:
   showSmoke: 1
   showVelocities: 0
   showStreamlines: 0
-  debugLineMaterial: {fileID: 2100000, guid: 638e40b4286f04c4a96db27f13f4cccd, type: 2}
+  debugLineMaterial: {fileID: 2100000, guid: 7c461b45c7507cf4c94d3a8f7bd6ec10, type: 2}
   settleFrames: 100
   sampleFrames: 200
   uiFont: {fileID: 12800000, guid: e3265ab4bf004d28a9537516768c1c75, type: 3}
@@ -1989,7 +1989,7 @@ MonoBehaviour:
   particleSpeedMultiplier: 0.2
   debugTrailMaterial: {fileID: 2100000, guid: 4290898fd27e4d44ba0ed1d677f7ec12, type: 2}
   intersectionPlane: {fileID: 1522181625}
-  polygonObstacle: {fileID: 0}
+  polygonObstacle: {fileID: 1522181633}
   parallelLayers: 3
   layerSpacing: 0.02
 --- !u!4 &379330336
@@ -5549,6 +5549,7 @@ GameObject:
   - component: {fileID: 1522181627}
   - component: {fileID: 1522181626}
   - component: {fileID: 1522181632}
+  - component: {fileID: 1522181633}
   m_Layer: 0
   m_Name: IntersectionPlane
   m_TagString: Untagged
@@ -5782,11 +5783,30 @@ MonoBehaviour:
   targetMeshFilter: {fileID: 8430104103616934412}
   handlePrefab: {fileID: 116027578869258276, guid: b542fd9bae03b0645800f6f6be2aa004, type: 3}
   influenceRadius: 0.1
-  handleCount: 6
+  handleCount: 10
   intersectionProvider: {fileID: 1522181627}
   verticalInfluence: 0.05
   normalOffset: 0.02
   referenceUp: {x: 0, y: 1, z: 0}
+--- !u!114 &1522181633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1522181625}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31a03d6d7c9f55647811384818d5b60b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  sim: {fileID: 379330335}
+  intersectionSource: {fileID: 1522181627}
+  lineWidth: 0.02
+  lineColor: {r: 0, g: 1, b: 0, a: 1}
+  obstacleScale: 3
+  distFromCentroid: 0
+  CentroidOri: {x: 0, y: 0, z: 0}
 --- !u!1 &1561931753
 GameObject:
   m_ObjectHideFlags: 0
@@ -10075,7 +10095,7 @@ Transform:
   m_GameObject: {fileID: 2016275904}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.3905945, z: 0, w: 0.9205628}
-  m_LocalPosition: {x: -0.734, y: 1.0509999, z: -0.35}
+  m_LocalPosition: {x: -0.727, y: 1.0509999, z: -0.341}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

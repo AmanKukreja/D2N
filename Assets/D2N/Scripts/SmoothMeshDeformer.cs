@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 public class SmoothMeshDeformer : MonoBehaviour
 {
@@ -19,6 +20,7 @@ public class SmoothMeshDeformer : MonoBehaviour
     // Handle Data
     private List<Transform> handles = new List<Transform>();
     private Vector3[] handleStartPositions;
+    private Vector3 normal;
     private List<int> affectedVertexIndices = new List<int>();
     private Dictionary<int, float[]> vertexWeights = new Dictionary<int, float[]>();
 
@@ -48,6 +50,7 @@ public class SmoothMeshDeformer : MonoBehaviour
     {
         GameObject[] controlPoints = GameObject.FindGameObjectsWithTag("ControlPoint");
 
+        // Delete all control points and generate new at new plane location
         foreach (GameObject cp in controlPoints)
         {
             Destroy(cp);
@@ -58,12 +61,64 @@ public class SmoothMeshDeformer : MonoBehaviour
 
         Transform meshT = targetMeshFilter.transform;
 
-        // 1. Get exact intersection curve (WORLD SPACE)
+        //Get exact intersection curve (WORLD SPACE)
+        //Debug.LogError("Entered smooth mesh");
         List<Vector3> curve = intersectionProvider.GetIntersectionCurve();
+        // Debug.LogError("Curve points" + curve.Count);
+
+        // Find centroid in y direction so as to find out points on to the top curve and bottom curve and then populate control points
+        float centroid=0;
+
+        for (int i =0; i < curve.Count; i++)
+        {
+            //GameObject handle = Instantiate(handlePrefab, curve[i], Quaternion.identity);
+            centroid=centroid+curve[i].y;
+        }
+        centroid=centroid/curve.Count;
+
+        // Find span in x direction and divide it equally to populate control points throughout the span
+        float minX = curve.Min(v => v.x);
+        float maxX = curve.Max(v => v.x);
+
+        float step = (maxX - minX) / 4f;
+
+        List<int> idxs = new List<int>(10);
+
+        // for each target X, find closest ABOVE and BELOW centroidY
+        for (int i = 0; i < handleCount; i++)
+        {
+            float targetX = minX + step * i;
+
+            int closestAbove = -1;
+            int closestBelow = -1;
+
+            float bestAboveXDist = float.MaxValue;
+            float bestBelowXDist = float.MaxValue;
+
+            for (int j = 0; j < curve.Count; j++)
+            {
+                float xDist = Mathf.Abs(curve[j].x - targetX);
+                float y = curve[j].y;
+
+                if (y > centroid && xDist < bestAboveXDist)
+                {
+                    bestAboveXDist = xDist;
+                    closestAbove = j;
+                }
+                else if (y < centroid && xDist < bestBelowXDist)
+                {
+                    bestBelowXDist = xDist;
+                    closestBelow = j;
+                }
+            }
+            idxs.Add(closestAbove);
+            idxs.Add(closestBelow);
+        }
+
         if (curve == null || curve.Count < 2 || curve.Count < handleCount)
             return;
 
-        // 2. Collect affected vertices (distance to curve instead of plane)
+        // Collect affected vertices (distance to curve instead of plane) to change shape of surface by moving control points
         affectedVertexIndices.Clear();
 
         float vertexCurveThreshold = influenceRadius * 0.75f;
@@ -80,56 +135,31 @@ public class SmoothMeshDeformer : MonoBehaviour
                 affectedVertexIndices.Add(i);
         }
 
-        // 3. Build cumulative arc-length table
-        List<float> cumulative = new List<float>();
-        //cumulative.Add(0f);
-
-        float totalLength = 0f;
-        for (int i = 1; i < curve.Count; i++)
-        {
-            totalLength += Vector3.Distance(curve[i - 1], curve[i]);
-            cumulative.Add(totalLength);
-        }
-
-        // 4. Spawn evenly spaced handles ON THE CURVE
+        // Spawn evenly spaced handles ON THE CURVE
         handleStartPositions = new Vector3[handleCount];
         handles.Clear();
 
         for (int h = 0; h < handleCount-1; h++)
         {
-            float targetDist = (h / (float)(handleCount - 1)) * totalLength;
+            Vector3 pos=curve[idxs[h]];
+            Vector3 spawnPos=pos;
 
-            int idx = cumulative.FindIndex(d => d >= targetDist);
-            if (idx <= 0) idx = 1;
-
-            float t = Mathf.InverseLerp(
-                cumulative[idx - 1],
-                cumulative[idx],
-                targetDist
-            );
-
-            Vector3 a = curve[idx - 1];
-            Vector3 b = curve[idx];
-
-            Vector3 pos = Vector3.Lerp(a, b, t);
-
-            // SUPER CHEAP normal (no cross product)
-            Vector3 dir = b - a;
-            Vector3 normal = new Vector3(0f, dir.x, -dir.y);   // perpendicular in XZ
-
-            Vector3 spawnPos = pos + normal.normalized * normalOffset;
-
+            if (pos.y < centroid)
+            {
+                spawnPos=new Vector3 (pos.x, pos.y - normalOffset, pos.z);
+            }
+            else
+            {
+                spawnPos=new Vector3 (pos.x, pos.y + normalOffset, pos.z);                
+            }
+            
             GameObject handle = Instantiate(handlePrefab, spawnPos, Quaternion.identity);
             handles.Add(handle.transform);
             handleStartPositions[h] = spawnPos;
-
-
-            // GameObject handle = Instantiate(handlePrefab, pos, Quaternion.identity);
-            // handles.Add(handle.transform);
-            // handleStartPositions[h] = pos;
+            // Debug.LogError("" + h);
         }
 
-        // 5. Precompute vertex weights (unchanged logic)
+        // Precompute vertex weights (unchanged logic)
         vertexWeights.Clear();
 
         foreach (int vIdx in affectedVertexIndices)
@@ -139,15 +169,6 @@ public class SmoothMeshDeformer : MonoBehaviour
 
             for (int h = 0; h < handleCount; h++)
             {
-                // float dist = Vector3.Distance(vWorldPos, handleStartPositions[h]);
-                // float t = Mathf.Clamp01(dist / influenceRadius);
-
-                // if (Mathf.Sign(vWorldPos.y - handleStartPositions[h].y) != Mathf.Sign(handleStartPositions[h].y))
-                // {
-                //     weights[h] = 0f;
-                //     continue;
-                // }
-
                 // weights[h] = 1.0f - (t * t * (3 - 2 * t)); // smoothstep
                 Vector3 handlePos = handleStartPositions[h];
 
