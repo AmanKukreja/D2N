@@ -268,7 +268,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1449656813236890531}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aaefaf34f4d05114d86d82a4eb9dda63, type: 3}
   m_Name: 
@@ -291,7 +291,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 99.99996, y: 46.925304, z: 49.99998}
   m_Center: {x: 0, y: 14.339208, z: 0}
@@ -552,7 +552,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2987505941967478509}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aaefaf34f4d05114d86d82a4eb9dda63, type: 3}
   m_Name: 
@@ -575,7 +575,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 99.99996, y: 44.04628, z: 49.99998}
   m_Center: {x: 0, y: 12.899696, z: 0}

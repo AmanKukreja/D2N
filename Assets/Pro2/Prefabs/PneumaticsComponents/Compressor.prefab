@@ -4927,7 +4927,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 238948a814766a04ba636ca8c5a2e12e, type: 2}
+  - {fileID: 2100000, guid: 9d5d21671afe12148abb1c0b7bc23f14, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -5226,7 +5226,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 1
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 0.12404863, y: 0.15835652, z: 0.12063114}
   m_Center: {x: -0.0047914498, y: -0.029178066, z: -0.003729616}
@@ -5237,7 +5237,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3097392848841708010}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: aaefaf34f4d05114d86d82a4eb9dda63, type: 3}
   m_Name: 

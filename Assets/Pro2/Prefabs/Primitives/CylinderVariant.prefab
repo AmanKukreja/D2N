@@ -312,13 +312,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 808175251429397775}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1f4db9cf4f4ad374d9b57deed03d85ec, type: 3}
+  m_Script: {fileID: 11500000, guid: 990bb6ef7e888274e94aa3910d888499, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   targetMeshFilter: {fileID: 7634243243287370840}
   targetCapsuleCollider: {fileID: 4560729949050698456}
-  topHandle: {fileID: 5690698943929737486}
-  baseHandle: {fileID: 651617762034757741}
+  topHandle: {fileID: 651617762034757741}
+  baseHandle: {fileID: 5690698943929737486}
   radialSegments: 24
   initialHeight: 0.3
   initialRadius: 0.1

@@ -1386,7 +1386,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7516989854015812293, guid: d2d6934a666a18d46b8b7a3864dc9f63, type: 3}
       propertyPath: _whenSelect.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
-      value: PPT_CAD_Activity
+      value: PPT_CAD_and_Pneumatics
       objectReference: {fileID: 0}
     - target: {fileID: 7516989854015812293, guid: d2d6934a666a18d46b8b7a3864dc9f63, type: 3}
       propertyPath: _whenSelect.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
@@ -1586,7 +1586,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 181535758}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7710adc8fb18a714dbd77c710ee90bbb, type: 3}
+  m_Script: {fileID: 11500000, guid: b5d5b2407d355c64da1f7712cc7ca085, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!4 &181535761 stripped

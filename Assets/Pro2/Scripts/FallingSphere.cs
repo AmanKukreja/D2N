@@ -11,6 +11,7 @@ public class FallingSphere : MonoBehaviour
     {
         // Save the starting position of the sphere
         originalPosition = transform.position;
+        // Debug.LogError(Vector3.down);
     }
 
     void Update()
@@ -19,7 +20,7 @@ public class FallingSphere : MonoBehaviour
         {
             if (transform.localPosition.y < resetThreshold)
             {
-                //Debug.LogError(transform.position.y + "and" + resetYThreshold);
+                Debug.LogError(transform.position.y + "and" + resetThreshold);
                 ResetPosition();
             }
         }

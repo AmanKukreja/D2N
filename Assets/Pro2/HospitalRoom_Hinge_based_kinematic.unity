@@ -507,7 +507,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 7516989853901387460}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7710adc8fb18a714dbd77c710ee90bbb, type: 3}
+  m_Script: {fileID: 11500000, guid: b5d5b2407d355c64da1f7712cc7ca085, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &198147341
@@ -11971,7 +11971,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: HospitalRoom 1
+          m_StringArgument: HospitalRoom_Rot_transformers
           m_BoolArgument: 0
         m_CallState: 2
       - m_Target: {fileID: 820969500653438166}

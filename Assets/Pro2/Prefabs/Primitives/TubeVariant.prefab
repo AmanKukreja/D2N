@@ -554,7 +554,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 2848056044793250076}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e254dff6c1acd674191eec64c383f352, type: 3}
+  m_Script: {fileID: 11500000, guid: 79b5e4f775b35e24c9f3f4a3e2b9c850, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   targetMeshFilter: {fileID: 1162022926586126344}
@@ -564,7 +564,7 @@ MonoBehaviour:
   bottomOuterHandle: {fileID: 4322555215645465644}
   bottomInnerHandle: {fileID: 8549465268770586013}
   handleAngleOffset: 30
-  radialSegments: 36
+  radialSegments: 24
   minWallThickness: 0.02
   initialLength: 0.3
   initialOuterRadius: 0.2

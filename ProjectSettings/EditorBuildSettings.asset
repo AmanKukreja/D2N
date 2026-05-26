@@ -20,9 +20,18 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/MXInkAnnotation/Scenes/HospitalRoom.unity
     guid: f32a8a83ceb88784ab8eb436ccb5d2c0
-  - enabled: 1
+  - enabled: 0
     path: Assets/D2N/D2N Sim Wing.unity
     guid: fe34b9941f78eca489a7af96184e439e
+  - enabled: 1
+    path: Assets/Pro2/PPT_CAD_and_Pneumatics.unity
+    guid: 61e7dd3ee908b724aa53ba78fa28d629
+  - enabled: 1
+    path: Assets/Pro2/HospitalRoom_Rot_transformers.unity
+    guid: b87f5b39dc6ce7b49af3d00b118271f8
+  - enabled: 1
+    path: Assets/Pro2/HospitalRoom_Hinge_based_kinematic.unity
+    guid: 675084390407f05469397ba8e98f3509
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: a6009a5873effa04bbbb5d955666a160, type: 2}
